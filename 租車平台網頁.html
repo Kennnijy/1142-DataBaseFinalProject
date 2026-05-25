@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>租車控制中心 // TELEMATICS CONTROL CENTER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #050505;                
+            --card-bg: #0F0F11;           
+            --border-color: #262629;      
+            --accent: #00FF66;            
+            --accent-yellow: #FFD700;     
+            --text-main: #FFFFFF;         
+            --text-sub: #D1D1D6;          
+            --text-dim: #A0A0A5;          
+            --input-bg: #1C1C1E;
+        }
+
+        body {  
+            background-color: var(--bg); 
+            background-image: linear-gradient(to bottom, rgba(5, 5, 5, 0.55), rgba(5, 5, 5, 0.55)), 
+                              url('https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?q=80&w=1920&auto=format&fit=crop');
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center;
+            color: var(--text-main); 
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            font-size: 16px; 
+            margin: 0;
+            padding: 0;
+        }
+
+        #welcome-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+        }
+        
+        .welcome-bg-animated {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(5, 5, 5, 0.9)), 
+                        url('https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+            z-index: -2;
+            animation: welcomeZoom 30s linear infinite alternate;
+        }
+
+        #welcome-screen::after {
+            content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
+            background: linear-gradient(rgba(0,255,102,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0,255,102,0.03) 1px, transparent 1px);
+            background-size: 30px 30px; z-index: -1;
+            animation: scanlineGrid 8s linear infinite;
+        }
+
+        @keyframes welcomeZoom { 0% { transform: scale(1) translateY(0); } 100% { transform: scale(1.1) translateY(-15px); } }
+        @keyframes scanlineGrid { 0% { background-position: 0 0; } 100% { background-position: 0 300px; } }
+
+        #welcome-screen.fade-out {
+            opacity: 0; transform: scale(1.15) cubic-bezier(0.16, 1, 0.3, 1); filter: blur(10px); pointer-events: none;
+        }
+        
+        .welcome-title {
+            font-size: 4.5rem; font-weight: 700; letter-spacing: 12px; color: #FFF;
+            text-shadow: 0 0 20px rgba(0,255,102,0.5), 0 0 40px rgba(0,255,102,0.2); margin-bottom: 12px;
+            animation: textGlow 3s ease-in-out infinite alternate;
+        }
+        @keyframes textGlow { 0% { text-shadow: 0 0 20px rgba(0,255,102,0.4); } 100% { text-shadow: 0 0 40px rgba(0,255,102,0.8), 0 0 10px rgba(0,255,102,0.5); } }
+
+        .welcome-subtitle { font-size: 1.3rem; color: var(--accent-yellow); letter-spacing: 6px; margin-bottom: 50px; font-weight: 500; }
+        
+        .btn-enter-system {
+            background: transparent; color: var(--accent); border: 2px solid var(--accent); padding: 18px 50px; font-size: 1.2rem;
+            font-weight: 700; letter-spacing: 4px; cursor: pointer; border-radius: 4px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 20px rgba(0,255,102,0.15);
+        }
+        .btn-enter-system:hover { background: var(--accent); color: #050505; box-shadow: 0 0 40px var(--accent); transform: scale(1.05) translateY(-3px); }
+
+        #success-animation-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5, 5, 7, 0.93); z-index: 10000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(12px);
+            opacity: 0; pointer-events: none; transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #success-animation-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .success-checkmark { width: 120px; height: 120px; margin-bottom: 25px; overflow: visible !important; }
+        .checkmark-circle {
+            stroke-dasharray: 166; stroke-dashoffset: 166; stroke-width: 4; stroke-miterlimit: 10; stroke: var(--accent); fill: none;
+            animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+        .checkmark-kick {
+            transform-origin: 50% 50%; stroke-dasharray: 48; stroke-dashoffset: 48; stroke-width: 5; stroke: var(--accent); fill: none;
+            animation: strokeKick 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+        }
+
+        @keyframes strokeCircle { 100% { stroke-dashoffset: 0; } }
+        @keyframes strokeKick { 100% { stroke-dashoffset: 0; } }
+
+        .success-anim-text {
+            font-size: 1.6rem; font-weight: 700; color: #FFF; letter-spacing: 2px; text-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
+            transform: scale(0.8); opacity: 0; text-align: center; max-width: 85%; margin-bottom: 35px; 
+            animation: textPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s forwards;
+        }
+        @keyframes textPop { 100% { transform: scale(1); opacity: 1; } }
+
+        .success-action-area { opacity: 0; transform: translateY(15px); animation: actionFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards; }
+        @keyframes actionFadeIn { 100% { opacity: 1; transform: translateY(0); } }
+
+        .btn-cyber-dialog-primary {
+            background: var(--accent); border: 2px solid var(--accent); color: #050505; font-weight: 700; padding: 12px 28px;
+            font-size: 15px; letter-spacing: 1px; transition: all 0.3s ease; box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+        }
+        .btn-cyber-dialog-primary:hover { background: transparent; color: var(--accent); box-shadow: 0 0 25px var(--accent); transform: translateY(-2px); }
+
+        .btn-cyber-dialog-secondary {
+            background: transparent; border: 2px solid var(--border-color); color: var(--text-sub); font-weight: 700; padding: 12px 28px;
+            font-size: 15px; letter-spacing: 1px; transition: all 0.3s ease;
+        }
+        .btn-cyber-dialog-secondary:hover { border-color: #FFFFFF; color: #FFFFFF; transform: translateY(-2px); }
+
+        #main-content { opacity: 0; transform: translateY(40px) scale(0.98); transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        #main-content.visible { opacity: 1; transform: translateY(0) scale(1); }
+
+        .tab-pane { opacity: 0; transform: translateX(20px); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .tab-pane.show.active { opacity: 1; transform: translateX(0); }
+
+        .nav-tabs { border-bottom: 2px solid var(--border-color); }
+        .nav-tabs .nav-link { 
+            color: var(--text-sub) !important; border: none !important; background: transparent !important; font-size: 16px;
+            font-weight: 700; padding: 20px 32px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); position: relative;
+        }
+        .nav-tabs .nav-link:hover { color: var(--accent) !important; }
+        .nav-tabs .nav-link.active { color: var(--accent-yellow) !important; } 
+        .nav-tabs .nav-link.active::after {
+            content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: var(--accent-yellow); box-shadow: 0 0 15px var(--accent-yellow);
+        }
+
+        .table-scroll-container { max-height: 750px; overflow-y: auto; border: 1px solid var(--border-color); background: rgba(10, 10, 12, 0.4); }
+
+        .design-card { background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 6px; padding: 32px; margin-bottom: 24px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .design-card:hover { border-color: rgba(0, 255, 102, 0.3); box-shadow: 0 10px 30px rgba(0, 255, 102, 0.05); transform: translateY(-4px); }
+
+        .cyber-header { color: var(--text-main) !important; font-size: 16px; font-weight: 700; letter-spacing: 1px; margin-bottom: 28px; display: flex; align-items: center; }
+        .cyber-header i { color: var(--accent); margin-right: 12px; }
+
+        .design-input {
+            background: var(--input-bg) !important; border: 2px solid var(--border-color) !important; color: #FFFFFF !important; 
+            border-radius: 0px !important; padding: 14px 16px; font-size: 15px; font-weight: 700; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .design-input:focus { border-color: var(--accent) !important; background: #232326 !important; box-shadow: 0 0 15px rgba(0, 255, 102, 0.2) !important; }
+        .design-input::placeholder { color: #A0A0A5 !important; opacity: 1 !important; font-weight: 500; }
+        .design-input option { background: #1C1C1E !important; color: #FFFFFF !important; }
+
+        .form-label { color: var(--text-sub) !important; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+        .form-label i { margin-right: 8px; color: var(--accent); }
+
+        .btn-design-primary {
+            background: var(--text-main); border: 2px solid var(--text-main); color: #000000; font-size: 16px; font-weight: 700;
+            letter-spacing: 1.5px; border-radius: 0px; padding: 18px 0; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-design-primary:hover { background: var(--accent); border-color: var(--accent); color: #000; transform: translateY(-2px); box-shadow: 0 5px 25px rgba(0,255,102,0.3); }
+
+        .btn-design-action {
+            border: 2px solid var(--border-color); color: var(--text-main); background: transparent; font-size: 14px; font-weight: 700;
+            padding: 8px 16px; border-radius: 0px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-design-action:hover { background: var(--accent); color: #000; border-color: var(--accent); box-shadow: 0 0 15px rgba(0,255,102,0.4); transform: scale(1.03); }
+
+        .table-design { --bs-table-bg: transparent; color: var(--text-main); border-color: var(--border-color); }
+        .table-design th, .table-design td { padding: 18px 12px; border-bottom: 1px solid var(--border-color); color: #FFFFFF !important; font-size: 15px; white-space: nowrap; }
+        .table-design th { font-size: 14px; border-bottom: 2px solid var(--border-color); font-weight: 700; }
+
+        .cyber-modal-content { background-color: var(--card-bg) !important; border: 2px solid var(--accent) !important; box-shadow: 0 0 30px rgba(0, 255, 102, 0.2); color: #FFF; border-radius: 4px; }
+        .cyber-modal-header { border-bottom: 1px solid var(--border-color); padding: 20px 24px; }
+        .cyber-modal-footer { border-top: 1px solid var(--border-color); padding: 16px 24px; }
+
+        .status-available { color: var(--accent) !important; font-weight: 700; }
+        .status-empty { color: #FF3B30 !important; font-weight: 700; }
+        .empty-records-box { padding: 80px 0; text-align: center; color: var(--text-dim); font-weight: 700; border: 2px dashed var(--border-color); background: rgba(15, 15, 17, 0.8); border-radius: 4px; }
+        .empty-records-box i { font-size: 3.5rem; color: #FF3B30; margin-bottom: 20px; text-shadow: 0 0 15px rgba(255,59,48,0.3); }
+        .empty-records-box .empty-title { font-size: 1.25rem; color: #FFFFFF; margin-bottom: 6px; letter-spacing: 1px; }
+        .btn-cyber-reset { background: transparent; border: 1px solid #FF3B30; color: #FF3B30; font-size: 13px; font-weight: 700; padding: 5px 14px; transition: all 0.3s ease; }
+        .btn-cyber-reset:hover { background: #FF3B30; color: #FFFFFF; box-shadow: 0 0 15px #FF3B30; }
+
+        .bike-row-selected {
+            background-color: rgba(0, 255, 102, 0.12) !important;
+            border-left: 4px solid var(--accent) !important;
+            box-shadow: inset 0 0 15px rgba(0, 255, 102, 0.1);
+        }
+        .bike-row-selected td { color: var(--accent) !important; }
+        .btn-bike-selected {
+            background: var(--accent) !important;
+            color: #000000 !important;
+            border-color: var(--accent) !important;
+            font-weight: 700;
+            box-shadow: 0 0 12px rgba(0, 255, 102, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+<div id="welcome-screen">
+    <div class="welcome-bg-animated"></div>
+    <div class="welcome-title text-uppercase"><i class="fa-solid fa-gauge-high text-success me-3"></i>Kennijy</div>
+    <div class="welcome-subtitle text-uppercase"><i class="fa-solid fa-shield-halved me-2"></i>租車平台</div>
+    <button class="btn btn-enter-system" onclick="enterSystem()"><i class="fa-solid fa-network-wired me-2"></i>連線進入控制台</button>
+</div>
+
+<div id="success-animation-overlay">
+    <svg class="success-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+        <circle class="checkmark-circle" cx="26" cy="26" r="25" />
+        <path class="checkmark-kick" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+    </svg>
+    <div class="success-anim-text" id="success-dynamic-text">系統授權：預約出車成功</div>
+    <div class="success-action-area d-flex gap-3">
+        <button class="btn btn-cyber-dialog-primary" onclick="dialogNavigateToOrders()"><i class="fa-solid fa-magnifying-glass me-2"></i>前往即時租借紀錄檢視</button>
+        <button class="btn btn-cyber-dialog-secondary" onclick="dialogStayAtRentPage()"><i class="fa-solid fa-rotate me-2"></i>停留在原頁面</button>
+    </div>
+</div>
+
+<div class="modal fade" id="editOrderModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content cyber-modal-content">
+            <div class="modal-header cyber-modal-header">
+                <h5 class="modal-title fw-bold text-warning"><i class="fa-solid fa-user-gear me-2"></i>核心租借合約調撥與修正中心</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="edit-order-id">
+                <div class="mb-3 p-2 bg-dark border border-secondary text-center">
+                    <span class="small text-dim">變更目標租單：</span>
+                    <span id="edit-order-id-display" class="font-monospace fw-bold text-success">#0</span>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-light"><i class="fa-solid fa-user text-success"></i>修正租客姓名</label>
+                        <input type="text" id="edit-cust-name" class="form-control design-input">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light"><i class="fa-solid fa-id-card text-success"></i>修正身分證字號</label>
+                        <input type="text" id="edit-cust-uid" class="form-control design-input">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light"><i class="fa-solid fa-phone text-success"></i>修正聯絡電話</label>
+                        <input type="text" id="edit-cust-phone" class="form-control design-input">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-warning"><i class="fa-solid fa-motorcycle"></i>指派車輛款式調撥</label>
+                        <select id="edit-bike-model" class="form-select design-input text-warning border-warning"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light"><i class="fa-solid fa-calendar-days text-success"></i>變更起租日期</label>
+                        <input type="date" id="edit-start-date" class="form-control design-input">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light"><i class="fa-solid fa-hourglass-half text-success"></i>修正天數 (系統自動算總額)</label>
+                        <input type="number" id="edit-est-days" class="form-control design-input" min="1">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light"><i class="fa-solid fa-wallet text-success"></i>修正結帳管道</label>
+                        <select id="edit-pay-method" class="form-select design-input">
+                            <option value="現金">現金支付</option>
+                            <option value="刷卡">信用卡感應</option>
+                            <option value="轉帳">網銀轉帳</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-light"><i class="fa-solid fa-circle-info text-success"></i>變更合約歸還狀態</label>
+                        <select id="edit-is-returned" class="form-select design-input">
+                            <option value="租借中">租借中 (車輛鎖定)</option>
+                            <option value="已還車">已還車 (解鎖釋放庫存)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-2 border-top border-secondary">
+                    <label class="form-label text-warning"><i class="fa-solid fa-key"></i>安全認證管理密碼 (Required)</label>
+                    <input type="password" id="edit-password" class="form-control design-input border-warning" placeholder="請輸入核心管理密碼 admin123">
+                </div>
+            </div>
+            <div class="modal-footer cyber-modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-cyber-dialog-secondary py-2" data-bs-dismiss="modal">取消修改</button>
+                <button type="button" class="btn btn-cyber-dialog-primary py-2" onclick="submitOrderUpdate()">覆蓋寫入 SQL Server</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid px-5 my-5" id="main-content">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-end">
+            <div>
+                <span class="text-uppercase small fw-bold" style="color: var(--accent); letter-spacing: 3px;"><i class="fa-solid fa-server me-2"></i>FOR BIKER</span>
+                <h1 class="display-5 fw-bold mt-2">租車控制中心</h1>
+            </div>
+            <div class="text-end font-monospace small" id="fleet-count" style="color: var(--accent) !important; font-weight: 700;">
+                <i class="fa-solid fa-circle-notch fa-spin me-2"></i>與 SQL Server 同步中...
+            </div>
+        </div>
+        <div class="col-12"><hr class="mt-4 mb-2" style="border-color: var(--border-color); border-width: 2px;"></div>
+    </div>
+
+    <ul class="nav nav-tabs mb-5" id="cyberTab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="rent-tab-trigger" data-bs-toggle="tab" data-bs-target="#rent-page" type="button">
+                <i class="fa-solid fa-file-signature me-2"></i>01 / 店面即時出車登記
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="orders-tab-trigger" data-bs-toggle="tab" data-bs-target="#orders-page" type="button" onclick="loadOrderDetails()">
+                <i class="fa-solid fa-rectangle-list me-2"></i>02 / 租借紀錄明細
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="cyberTabContent">
+        <div class="tab-pane fade show active" id="rent-page">
+            <div class="row g-4">
+                <div class="col-xl-9">
+                    <div class="design-card">
+                        <div class="cyber-header"><i class="fa-solid fa-sliders"></i>車輛型號選擇</div>
+                        <div class="row g-2 mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label small text-dim">指定廠牌</label>
+                                <select id="filter-brand" class="form-select design-input" onchange="renderBikeInventory()">
+                                    <option value="全部">所有廠牌 (All)</option>
+                                    <option value="YAMAHA">YAMAHA 山葉</option>
+                                    <option value="HONDA">HONDA 本田</option>
+                                    <option value="KAWASAKI">KAWASAKI 川崎</option>
+                                    <option value="SUZUKI">SUZUKI 鈴木</option>
+                                    <option value="SYM">SYM 三陽</option>
+                                    <option value="KYMCO">KYMCO 光陽</option>
+                                    <option value="DUCATI">DUCATI 杜卡迪</option>
+                                    <option value="TRIUMPH">TRIUMPH 凱旋</option>
+                                    <option value="APRILIA">APRILIA 阿普利亞</option>
+                                    <option value="BMW">BMW 寶馬</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-dim">路權法規</label>
+                                <select id="filter-type" class="form-select design-input" onchange="handleTypeChange()">
+                                    <option value="全部">所有法規分類</option>
+                                    <option value="大型重機">大型重機 (黃/紅牌)</option>
+                                    <option value="普通重機">普通重機 (白牌)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-dim">排氣量級距</label>
+                                <select id="filter-cc" class="form-select design-input" onchange="renderBikeInventory()">
+                                    <option value="全部" id="cc-all">所有排氣量</option>
+                                    <option value="白牌" id="cc-white">100cc - 250cc</option>
+                                    <option value="黃牌" id="cc-yellow">251cc - 550cc</option>
+                                    <option value="紅牌" id="cc-red">551cc 以上</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-dim">排序方式</label>
+                                <select id="sort-cc-direction" class="form-select design-input text-warning fw-bold" onchange="renderBikeInventory()">
+                                    <option value="CC_DESC">排氣量：由大到小 ↓</option>
+                                    <option value="CC_ASC">排氣量：由小到大 ↑</option>
+                                    <option value="PRICE_DESC">每日租金：由高到低 ↓</option>
+                                    <option value="PRICE_ASC">每日租金：由低到高 ↑</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-scroll-container">
+                            <table class="table table-design table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>車型款式</th>
+                                        <th>廠牌</th>
+                                        <th>排氣量</th>
+                                        <th>每日租金</th>
+                                        <th>總數量</th>
+                                        <th>剩餘狀態</th>
+                                        <th>選取型號</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3">
+                    <div class="design-card">
+                        <div class="cyber-header"><i class="fa-solid fa-user-astronaut"></i>臨櫃車友登記</div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-user"></i>車友姓名</label>
+                            <input type="text" id="cust-name" class="form-control design-input" placeholder="例：黃少鯤">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-id-card"></i>身分證字號</label>
+                            <input type="text" id="cust-uid" class="form-control design-input" placeholder="例：A123456789">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-phone-volume"></i>聯絡電話</label>
+                            <input type="text" id="cust-phone" class="form-control design-input" placeholder="例 : 0912345678">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fa-solid fa-id-card-clip"></i>核對駕照類別</label>
+                            <select id="cust-license" class="form-select design-input">
+                                <option value="大型重機">大型重機駕照</option>
+                                <option value="普通重機">普通重機駕照</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-warning"><i class="fa-solid fa-credit-card"></i>付款方式</label>
+                            <select id="cust-pay-method" class="form-select design-input text-warning border-warning">
+                                <option value="現金">現金 (Cash)</option>
+                                <option value="刷卡">信用卡 (Credit Card)</option>
+                                <option value="轉帳">行動支付 / 網銀轉帳</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-info"><i class="fa-solid fa-user-tie"></i>出車經辦人員</label>
+                            <input type="text" id="cust-employee" class="form-control design-input border-info" placeholder="輸入負責出車的員工姓名">
+                        </div>
+
+                        <div class="mb-4 p-3" style="background: #161619; border-left: 4px solid var(--accent); border-radius: 2px;">
+                            <span class="small d-block mb-1" style="color: var(--text-dim); font-size:12px; font-weight:700;"><i class="fa-solid fa-circle-check me-2"></i>當前選定車型：</span>
+                            <span id="target-bike-model" class="fw-bold text-warning" style="font-size: 15px;">請點選左表「選取車款」</span>
+                        </div>
+                        
+                        <div class="row g-2 mb-4">
+                            <div class="col-12 mb-2">
+                                <label class="form-label"><i class="fa-solid fa-calendar-days"></i>起租交車日期</label>
+                                <input type="date" id="start-date" class="form-control design-input" onchange="calculateByDays()">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label"><i class="fa-solid fa-hourglass-half"></i>預計天數</label>
+                                <input type="number" id="est-days" class="form-control design-input" value="2" min="1" oninput="calculateByDays()">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label"><i class="fa-solid fa-calendar-check"></i>預計還車日期</label>
+                                <input type="date" id="end-date" class="form-control design-input" onchange="calculateByEndDate()">
+                            </div>
+                        </div>
+                        <button onclick="submitRental()" class="btn btn-design-primary w-100"><i class="fa-solid fa-cash-register me-2"></i>付款完成並授權出車</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="orders-page">
+            <div class="design-card">
+                <div class="cyber-header d-flex justify-content-between align-items-center mb-3">
+                    <div><i class="fa-solid fa-receipt"></i>即時連線單據明細(SQL Server Management Studio 22) </div>
+                    <button class="btn btn-cyber-reset" onclick="triggerSystemReset()"><i class="fa-solid fa-triangle-exclamation me-1"></i>資料庫重設歸零 (Reset)</button>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-success"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="order-search-input" class="form-control design-input" placeholder="輸入關鍵字搜尋... (支援單號、車友姓名、身分證、手機號碼、指定車牌、車款名稱、日期天數、結帳管道、經辦人員)" oninput="filterOrdersTable()">
+                    </div>
+                </div>
+
+                <div style="max-height: 750px; overflow-y: auto;">
+                    <table class="table table-design table-hover align-middle" style="font-size:14px;">
+                        <thead>
+                            <tr>
+                                <th>單號</th>
+                                <th>租賃車友基本資料</th>
+                                <th>車輛出租資訊</th>
+                                <th>起租日期</th>
+                                <th>預計還車日</th>
+                                <th>天數</th>
+                                <th>合約總額</th>
+                                <th>財務與車輛狀態</th>
+                                <th class="text-info" style="width: 14%;"><i class="fa-solid fa-user-pen me-1"></i>出車經辦與時間</th>
+                                <th class="text-success" style="width: 14%;"><i class="fa-solid fa-user-check me-1"></i>還車點收與時間</th>
+                                <th class="text-warning" style="width: 14%;"><i class="fa-solid fa-user-gear me-1"></i>最後修改與時間</th>
+                                <th style="width: 13%;">櫃檯管理作業</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let rawInventory = [];
+    let currentModalInstance = null;
+    let selectedBikeModel = ""; 
+
+    function enterSystem() {
+        const welcome = document.getElementById('welcome-screen');
+        const mainContent = document.getElementById('main-content');
+        welcome.classList.add('fade-out'); 
+        setTimeout(() => { welcome.style.display = 'none'; mainContent.classList.add('visible'); }, 600);
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('start-date').value = todayStr;
+        calculateByDays(); 
+        loadInventory();
+        loadOrderDetails(); 
+    });
+
+    function calculateByDays() {
+        const startDateInput = document.getElementById('start-date').value;
+        const daysInput = parseInt(document.getElementById('est-days').value);
+        if (!startDateInput || isNaN(daysInput) || daysInput < 1) return;
+        const parts = startDateInput.split('-');
+        const targetDate = new Date(parseInt(parts[0]), parts[1] - 1, parts[2]);
+        targetDate.setDate(targetDate.getDate() + daysInput);
+        document.getElementById('end-date').value = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+    }
+
+    function calculateByEndDate() {
+        const startDateInput = document.getElementById('start-date').value;
+        const endDateInput = document.getElementById('end-date').value;
+        if (!startDateInput || !endDateInput) return;
+        const p1 = startDateInput.split('-'); const p2 = endDateInput.split('-');
+        const d1 = new Date(p1[0], p1[1] - 1, p1[2]); const d2 = new Date(p2[0], p2[1] - 1, p2[2]);
+        if (d2 < d1) {
+            alert("還車日期不可小於起租日！");
+            document.getElementById('end-date').value = startDateInput;
+            document.getElementById('est-days').value = 1;
+            return;
+        }
+        const daysDiff = Math.ceil((d2.getTime() - d1.getTime()) / (1000 * 3600 * 24));
+        document.getElementById('est-days').value = daysDiff === 0 ? 1 : daysDiff;
+    }
+
+    function loadInventory() {
+        fetch('/api/bike_inventory')
+        .then(res => res.json())
+        .then(data => {
+            rawInventory = data;
+            let bigCount = data.filter(b => b.cc > 250).length;
+            document.getElementById("fleet-count").innerHTML = `<i class="fa-solid fa-wifi text-success me-2"></i>線上編制：${data.length} 款車型 (含 ${bigCount} 款大型紅/黃牌重機)`;
+            renderBikeInventory();
+            populateModalBikeSelect(); 
+        });
+    }
+
+    function populateModalBikeSelect() {
+        const select = document.getElementById("edit-bike-model");
+        if (!select) return;
+        let html = "";
+        rawInventory.forEach(b => { html += `<option value="${b.model}">${b.model}</option>`; });
+        select.innerHTML = html;
+    }
+
+    function handleTypeChange() {
+        const typeSelect = document.getElementById("filter-type").value;
+        const ccSelect = document.getElementById("filter-cc");
+        document.getElementById("cc-white").disabled = (typeSelect === "大型重機");
+        document.getElementById("cc-yellow").disabled = (typeSelect === "普通重機");
+        document.getElementById("cc-red").disabled = (typeSelect === "普通重機");
+        if(typeSelect === "大型重機" && ccSelect.value === "白牌") ccSelect.value = "全部";
+        if(typeSelect === "普通重機" && (ccSelect.value === "黃牌" || ccSelect.value === "紅牌")) ccSelect.value = "全部";
+        renderBikeInventory();
+    }
+
+    function renderBikeInventory() {
+        const brand = document.getElementById("filter-brand").value;
+        const cc = document.getElementById("filter-cc").value;
+        const type = document.getElementById("filter-type").value;
+        const sortDirection = document.getElementById("sort-cc-direction").value;
+
+        let filtered = rawInventory.filter(b => {
+            if (brand !== "全部" && b.brand !== brand) return false;
+            if (type !== "全部" && b.type !== type) return false;
+            if (cc === "白牌" && b.cc > 250) return false;
+            if (cc === "黃牌" && (b.cc <= 250 || b.cc > 550)) return false;
+            if (cc === "紅牌" && b.cc <= 550) return false;
+            return true;
+        });
+
+        filtered.sort((a, b) => {
+            if (sortDirection === "CC_DESC") return b.cc - a.cc;
+            if (sortDirection === "CC_ASC") return a.cc - b.cc;
+            if (sortDirection === "PRICE_DESC") return b.rate - a.rate;
+            if (sortDirection === "PRICE_ASC") return a.rate - b.rate;
+            return 0;
+        });
+
+        let html = "";
+        filtered.forEach(b => {
+            let stockStatus = b.available === 0 ? 
+                `<span class="status-empty"><i class="fa-solid fa-triangle-exclamation me-1"></i>庫存調度空</span>` : 
+                `<span class="status-available"><i class="fa-solid fa-square-check me-1"></i>剩餘 ${b.available} 輛</span>`;
+
+            const isSelected = (b.model === selectedBikeModel);
+            const rowClass = isSelected ? 'class="bike-row-selected"' : '';
+            const btnClass = isSelected ? 'btn-bike-selected' : '';
+            const btnText = isSelected ? '<i class="fa-solid fa-circle-check me-1"></i>已選取' : '<i class="fa-solid fa-arrow-pointer me-1"></i>選取此款';
+            const modelIcon = isSelected ? '<i class="fa-solid fa-circle-chevron-right fa-fade me-2 text-success"></i>' : '';
+
+            html += `
+                <tr ${rowClass}>
+                    <td>${modelIcon}<b>${b.model}</b></td>
+                    <td>${b.brand}</td>
+                    <td class="font-monospace text-info">${b.cc} cc</td>
+                    <td class="font-monospace text-warning">$${b.rate}</td>
+                    <td class="font-monospace">${b.total} 輛</td>
+                    <td>${stockStatus}</td>
+                    <td>
+                        <div class="d-flex justify-content-start">
+                            <button class="btn btn-design-action ${btnClass}" onclick="selectBikeModel('${b.model}')" ${b.available === 0 ? 'disabled' : ''}>
+                                ${btnText}
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+        document.getElementById("inventory-tbody").innerHTML = html;
+    }
+
+    function selectBikeModel(modelName) {
+        selectedBikeModel = modelName;
+        document.getElementById('target-bike-model').innerText = modelName;
+        renderBikeInventory(); 
+    }
+
+    function submitRental() {
+        let model = document.getElementById('target-bike-model').innerText;
+        if (model === "請點選左表「選取車款」") { alert("請先選取欲出租之車款！"); return; }
+        
+        let payload = {
+            name: document.getElementById("cust-name").value.trim(),
+            uid: document.getElementById("cust-uid").value.trim(),
+            phone: document.getElementById("cust-phone").value.trim(),
+            license_type: document.getElementById("cust-license").value,
+            model_name: model,
+            start_date: document.getElementById("start-date").value,
+            estimated_days: document.getElementById("est-days").value,
+            pay_method: document.getElementById("cust-pay-method").value,
+            employee: document.getElementById("cust-employee").value.trim() 
+        };
+
+        if(!payload.name || !payload.uid || !payload.phone) { alert("車友基本資料尚未齊全！"); return; }
+        if(!payload.employee) { alert("操作中止：請填寫本次出車負責的櫃檯「出車經辦人員」！"); return; }
+
+        fetch('/api/rent_process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if(resData.status === "success"){
+                document.getElementById("success-dynamic-text").innerHTML = `<i class="fa-solid fa-square-check text-accent me-2"></i>系統授權：出車成功 - ${model}`;
+                document.getElementById("success-animation-overlay").classList.add("active");
+                
+                selectedBikeModel = ""; 
+                loadInventory();
+                loadOrderDetails(); 
+                
+                document.getElementById("cust-name").value = "";
+                document.getElementById("cust-uid").value = "";
+                document.getElementById("cust-phone").value = "";
+                document.getElementById("cust-employee").value = "";
+                document.getElementById("target-bike-model").innerText = "請點選左表「選取車款」";
+            } else { alert(resData.message); }
+        });
+    }
+
+    function dialogNavigateToOrders() {
+        document.getElementById("success-animation-overlay").classList.remove("active");
+        bootstrap.Tab.getInstance(document.getElementById('orders-tab-trigger'))?.show() || new bootstrap.Tab(document.getElementById('orders-tab-trigger')).show();
+        loadOrderDetails();
+    }
+    function dialogStayAtRentPage() { document.getElementById("success-animation-overlay").classList.remove("active"); }
+
+    function loadOrderDetails() {
+        fetch('/api/order_details')
+        .then(res => res.json())
+        .then(orders => {
+            const tbody = document.getElementById("orders-tbody");
+            if (!orders || orders.length === 0 || orders.status === "error") {
+                tbody.innerHTML = `<tr><td colspan="12" class="p-0"><div class="empty-records-box"><i class="fa-solid fa-box-open"></i><div class="empty-title">尚未有訂單紀錄</div></div></td></tr>`;
+                return;
+            }
+
+            let html = "";
+            orders.forEach(o => {
+                let isReturned = (o.end_date !== "租借中");
+                
+                // 💡 修正需求 1：加上 text-nowrap 防止狀態標籤內部換行
+                let statusBadge = isReturned ? 
+                    `<span class="badge bg-secondary text-nowrap" style="font-size:11px; padding:6px 10px;"><i class="fa-solid fa-folder-closed me-1"></i>已歸還結案 (${o.pay_status})</span>` : 
+                    `<span class="badge bg-success text-nowrap" style="color:#000 !important; font-weight:700; font-size:11px; padding:6px 10px;"><i class="fa-solid fa-motorcycle fa-fade me-1"></i>租借中 (${o.pay_status})</span>`;
+                
+                let actionBtns = `
+                    <div class="d-flex gap-1 justify-content-end">
+                        <button class="btn btn-sm btn-outline-warning font-monospace py-1" style="font-size:12px; font-weight:700;" 
+                            onclick="openEditOrderModal(${o.order_id}, '${o.cust_name}', '${o.cust_uid}', '${o.cust_phone}', '${o.start_date}', ${o.est_days}, '${o.bike_model}', '${o.pay_method}', '${isReturned ? '已還車' : '租借中'}')">
+                            <i class="fa-solid fa-user-gear"></i> 修改
+                        </button>
+                        ${isReturned ? '' : `
+                        <button class="btn btn-sm btn-outline-success font-monospace py-1" style="font-size:12px; font-weight:700;" onclick="executeReturnCheckout(${o.order_id})">
+                            <i class="fa-solid fa-box-archive"></i> 還車
+                        </button>
+                        `}
+                        <button class="btn btn-sm btn-outline-danger font-monospace py-1" style="font-size:12px; font-weight:700;" onclick="executeDeleteOrder(${o.order_id})">
+                            <i class="fa-solid fa-trash-can"></i> 刪除
+                        </button>
+                    </div>`;
+
+                html += `
+                    <tr>
+                        <td><span class="font-monospace text-white fw-bold">#${o.order_id}</span></td>
+                        <td>
+                            <strong class="text-white d-block mb-1"><i class="fa-solid fa-user-check me-2 text-dim"></i>${o.cust_name}</strong>
+                            <span class="text-dim d-block" style="font-size:11px;">身分證: ${o.cust_uid}</span>
+                            <span class="text-dim d-block" style="font-size:11px;">電話: ${o.cust_phone}</span>
+                        </td>
+                        <td>
+                            <code class="text-warning d-block mb-1 fw-bold"><i class="fa-solid fa-id-card me-2"></i>${o.bike_plate}</code>
+                            <span class="text-white fw-bold d-block" style="font-size:13px;">${o.bike_model}</span>
+                            <small class="text-info font-monospace d-block" style="font-size:11px;">日租: $${o.daily_rate}</small>
+                        </td>
+                        <td><span class="font-monospace text-success fw-bold">${o.start_date}</span></td>
+                        <td><span class="font-monospace text-accent-yellow fw-bold">${o.expected_end_date}</span></td>
+                        <td><span class="font-monospace text-info fw-bold">${o.est_days} 天</span></td>
+                        <td><span class="font-monospace text-success fw-bold" style="font-size:15px;">$${o.total_cost.toLocaleString()}</span></td>
+                        <td>${statusBadge}<br><small class="text-dim">${o.pay_method}</small></td>
+                        
+                        <td><div class="text-info" style="font-size:11px; font-weight:500; line-height:1.2; white-space:normal; max-width:140px;">${o.emp_out}</div></td>
+                        <td><div class="text-success" style="font-size:11px; font-weight:500; line-height:1.2; white-space:normal; max-width:140px;">${o.emp_back}</div></td>
+                        <td><div class="text-warning" style="font-size:11px; font-weight:500; line-height:1.2; white-space:normal; max-width:140px;">${o.emp_edit}</div></td>
+                        
+                        <td class="text-end">${actionBtns}</td>
+                    </tr>`;
+            });
+            tbody.innerHTML = html;
+            filterOrdersTable(); 
+        });
+    }
+
+    function filterOrdersTable() {
+        const keyword = document.getElementById("order-search-input").value.toLowerCase().trim();
+        const rows = document.querySelectorAll("#orders-tbody tr");
+        if (rows.length === 1 && rows[0].querySelector(".empty-records-box")) return;
+
+        rows.forEach(row => {
+            if (row.textContent.toLowerCase().includes(keyword)) {
+                row.style.display = ""; 
+            } else {
+                row.style.display = "none"; 
+            }
+        });
+    }
+
+    function executeReturnCheckout(orderId) {
+        let password = prompt(`🏍️ 【重車回收安全驗證 - 租單 #${orderId}】\n\n請輸入臨櫃核銷管理密碼：`);
+        if (password === null) return;
+        if (password.trim() !== "admin123") { 
+            alert("❌ 驗證失敗：管理密碼不正確，放行程序強制中斷！"); 
+            return; 
+        }
+        
+        let employeeName = prompt(`📋 【工作人員點收登記 - 租單 #${orderId}】\n\n請輸入負責本次車輛清點的「還車經辦」姓名：`);
+        if (employeeName === null) return;
+        if (employeeName.trim() === "") { alert("必須具名點收的工作人員姓名！"); return; }
+
+        fetch('/api/return_process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rental_id: orderId, password: password, employee: employeeName.trim() })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === "success") { 
+                alert("🎉 " + resData.message); loadOrderDetails(); loadInventory(); 
+            } else { alert("❌ 核銷失敗：" + resData.message); }
+        });
+    }
+
+    function openEditOrderModal(orderId, cName, cUid, cPhone, sDate, eDays, bModel, pMethod, rStatus) {
+        document.getElementById('edit-order-id').value = orderId;
+        document.getElementById('edit-order-id-display').innerText = '#' + orderId;
+        document.getElementById('edit-cust-name').value = cName;
+        document.getElementById('edit-cust-uid').value = cUid; 
+        document.getElementById('edit-cust-phone').value = cPhone;
+        document.getElementById('edit-start-date').value = sDate.replace(/\//g, '-'); 
+        document.getElementById('edit-est-days').value = eDays;
+        document.getElementById('edit-bike-model').value = bModel; 
+        document.getElementById('edit-pay-method').value = pMethod;
+        document.getElementById('edit-is-returned').value = rStatus;
+        document.getElementById('edit-password').value = ""; 
+
+        currentModalInstance = new bootstrap.Modal(document.getElementById('editOrderModal'));
+        currentModalInstance.show();
+    }
+
+    function submitOrderUpdate(reCheckoutConfirmed = false) {
+        let orderId = document.getElementById('edit-order-id').value;
+        let pword = document.getElementById('edit-password').value;
+        
+        if (!pword) { alert("必須填寫核心管理密碼！"); return; }
+        if (pword !== "admin123") { 
+            alert("❌ 驗證失敗：管理密碼不正確，寫入拒絕！"); 
+            return; 
+        }
+
+        let employeeName = prompt(`📝 【安全變更稽核追蹤 - 租單 #${orderId}】\n\n請輸入負責本次內容修改的「工作人員姓名」：`);
+        if (employeeName === null) return;
+        if (employeeName.trim() === "") { alert("異動攔截：修改合約必須填寫操作人姓名！"); return; }
+
+        const payload = {
+            order_id: orderId,
+            cust_name: document.getElementById('edit-cust-name').value.trim(),
+            cust_uid: document.getElementById('edit-cust-uid').value.trim(), 
+            cust_phone: document.getElementById('edit-cust-phone').value.trim(),
+            start_date: document.getElementById('edit-start-date').value, 
+            est_days: document.getElementById('edit-est-days').value,
+            bike_model: document.getElementById('edit-bike-model').value, 
+            pay_method: document.getElementById('edit-pay-method').value,
+            is_returned: document.getElementById('edit-is-returned').value,
+            password: pword,
+            employee: employeeName.trim(),
+            re_checkout_confirmed: reCheckoutConfirmed 
+        };
+
+        fetch('/api/update_order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === "need_re_checkout") {
+                let diff = resData.new_cost - resData.old_cost;
+                let actionText = diff > 0 ? `臨櫃向客戶【補收差額 $${diff}】` : `臨櫃向客戶【退還溢收 $${Math.abs(diff)}】`;
+                
+                if (confirm(`${resData.message}\n\n財務清算指示：請完成 ${actionText}。\n確認是否已在現場完成重新結帳收付款？`)) {
+                    submitOrderUpdate(true);
+                } else {
+                    alert("操作中止：合約變更涉及租金帳務變動，必須核銷金額後才可寫入資料庫！");
+                }
+            } else if (resData.status === "success") {
+                alert("🎉 " + resData.message); 
+                currentModalInstance.hide(); 
+                loadOrderDetails(); 
+                loadInventory();
+            } else { alert(resData.message); }
+        });
+    }
+
+    function executeDeleteOrder(orderId) {
+        let password = prompt(`🚨 【安全驗證：刪除銷毀租單 #${orderId}】\n\n請輸入核心管理密碼：`);
+        if (password === null) return;
+        if (password.trim() !== "admin123") { 
+            alert("❌ 驗證失敗：管理密碼錯誤，刪除程序強行阻斷！"); 
+            return; 
+        }
+        
+        let employeeName = prompt(`📋 【銷毀責任軌跡登記 - 租單 #${orderId}】\n\n請輸入負責本次刪除的工作人員姓名：`);
+        if (employeeName === null) return;
+        if (employeeName.trim() === "") { alert("拒絕執行：必須提供操作刪除的工作人員姓名！"); return; }
+        
+        if (!confirm(`⚠️ 最終警告：您確定要完全刪除這筆合約嗎？此操作將永久銷毀資料庫數據！`)) return;
+        
+        fetch('/api/delete_order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, password: password, employee: employeeName.trim() })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === "success") {
+                alert("🚀 " + resData.message); loadOrderDetails(); loadInventory();
+            } else { alert("❌ 刪除失敗：" + resData.message); }
+        });
+    }
+
+    function triggerSystemReset() {
+        let password = prompt("🚨 【最高警告：清空全廠資料庫】\n請輸入核心管理密碼進行權限認證：");
+        if (password === null) return;
+        if (password.trim() !== "admin123") { alert("❌ 驗證失敗：拒絕重置資料庫！"); return; }
+        if (!confirm("確定重設嗎？資料將無法復原！")) return;
+        
+        fetch('/api/reset_database', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: password })
+        })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === "success") { alert(resData.message); loadInventory(); loadOrderDetails(); } 
+            else { alert(resData.message); }
+        });
+    }
+</script>
+</body>
+</html>
